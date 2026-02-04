@@ -382,12 +382,8 @@ defmodule TermUI.Terminal do
 
   @impl true
   def handle_info(:sigwinch, state) do
-    require Logger
-    Logger.debug("Terminal: Received SIGWINCH signal")
-
     case do_get_terminal_size() do
       {:ok, {rows, cols}} ->
-        Logger.debug("Terminal: New size = #{rows}x#{cols}, broadcasting to #{length(state.resize_callbacks)} callbacks")
         new_state = %{state | size: {rows, cols}}
 
         for pid <- new_state.resize_callbacks do
@@ -396,21 +392,17 @@ defmodule TermUI.Terminal do
 
         {:noreply, new_state}
 
-      {:error, reason} ->
-        Logger.debug("Terminal: Failed to get terminal size: #{inspect(reason)}")
+      {:error, _reason} ->
         {:noreply, state}
     end
   end
 
   @impl true
   def handle_info(:poll_resize, state) do
-    require Logger
-
     # Check if terminal size has changed
     case do_get_terminal_size() do
       {:ok, {rows, cols}} ->
         if state.size != {rows, cols} do
-          Logger.debug("Terminal: Poll detected resize - #{rows}x#{cols} (was #{inspect(state.size)})")
           new_state = %{state | size: {rows, cols}}
 
           for pid <- new_state.resize_callbacks do

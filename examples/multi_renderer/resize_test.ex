@@ -61,9 +61,6 @@ defmodule ResizeTest do
   # State updates
 
   def update({:resize, width, height}, state) do
-    require Logger
-    Logger.info("ResizeTest: Received resize event - #{width}x#{height}")
-
     new_state = %{
       width: width,
       height: height,
