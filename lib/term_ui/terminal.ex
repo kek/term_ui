@@ -197,11 +197,21 @@ defmodule TermUI.Terminal do
 
     # Register for SIGWINCH (terminal resize) signals
     # This makes the OS send :sigwinch messages to this process when the terminal is resized
-    try do
+    sigwinch_available = try do
       :os.set_signal(:sigwinch, :handle)
+      true
     rescue
       # Ignore if :os.set_signal/2 is not available (e.g., on Windows)
-      _ -> :ok
+      _ -> false
+    end
+
+    # Start polling for resize if SIGWINCH is not available or we're in WSL
+    # WSL doesn't reliably deliver SIGWINCH signals
+    poll_for_resize = !sigwinch_available || wsl_environment?()
+
+    if poll_for_resize do
+      # Poll every 500ms for terminal size changes
+      schedule_resize_poll()
     end
 
     state = State.new()
@@ -388,6 +398,37 @@ defmodule TermUI.Terminal do
 
       {:error, reason} ->
         Logger.debug("Terminal: Failed to get terminal size: #{inspect(reason)}")
+        {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_info(:poll_resize, state) do
+    require Logger
+
+    # Check if terminal size has changed
+    case do_get_terminal_size() do
+      {:ok, {rows, cols}} ->
+        if state.size != {rows, cols} do
+          Logger.debug("Terminal: Poll detected resize - #{rows}x#{cols} (was #{inspect(state.size)})")
+          new_state = %{state | size: {rows, cols}}
+
+          for pid <- new_state.resize_callbacks do
+            send(pid, {:terminal_resize, {rows, cols}})
+          end
+
+          # Schedule next poll
+          schedule_resize_poll()
+          {:noreply, new_state}
+        else
+          # No change, schedule next poll
+          schedule_resize_poll()
+          {:noreply, state}
+        end
+
+      {:error, _reason} ->
+        # Failed to get size, schedule next poll anyway
+        schedule_resize_poll()
         {:noreply, state}
     end
   end
@@ -625,5 +666,27 @@ defmodule TermUI.Terminal do
           :ok
       end
     end
+  end
+
+  # Detect if running in WSL (Windows Subsystem for Linux)
+  defp wsl_environment? do
+    # Check for WSL-specific indicators
+    case System.cmd("uname", ["-r"], stderr_to_stdout: true) do
+      {output, 0} ->
+        # WSL kernel versions contain "microsoft" or "WSL"
+        String.contains?(String.downcase(output), ["microsoft", "wsl"])
+
+      _ ->
+        false
+    end
+  rescue
+    _ -> false
+  end
+
+  # Schedule a resize poll check
+  defp schedule_resize_poll do
+    # Poll every 500ms for terminal size changes
+    # This is a fallback for environments where SIGWINCH doesn't work (e.g., WSL)
+    Process.send_after(self(), :poll_resize, 500)
   end
 end
