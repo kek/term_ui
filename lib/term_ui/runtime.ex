@@ -600,6 +600,9 @@ defmodule TermUI.Runtime do
 
   @impl true
   def handle_info({:terminal_resize, {rows, cols}}, state) do
+    require Logger
+    Logger.debug("Runtime: Received terminal_resize callback - #{rows}x#{cols}")
+
     # Terminal window was resized
     if state.shutting_down do
       {:noreply, state}
