@@ -202,12 +202,12 @@ defmodule TermUI.Widgets.Viewport do
         stack(:horizontal, [content, v_bar])
 
       :horizontal ->
-        h_bar = render_horizontal_bar(state, vp_width, chars)
+        h_bar = render_horizontal_bar(state, vp_width)
         stack(:vertical, [content, h_bar])
 
       :both ->
         chars = CharacterSet.current_charset()
-        v_bar = render_vertical_bar(state, vp_height)
+        v_bar = render_vertical_bar(state, vp_height, chars)
         h_bar = render_horizontal_bar(state, vp_width)
 
         # Content + vertical bar on top, horizontal bar on bottom
