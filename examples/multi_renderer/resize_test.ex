@@ -76,9 +76,16 @@ defmodule ResizeTest do
   # View rendering
 
   def view(state) do
-    box([
+    # Get dimension status text
+    dim_status = if state.width > 0 and state.height > 0 do
+      "#{state.width} x #{state.height}"
+    else
+      "Waiting for initial resize event..."
+    end
+
+    stack(:vertical, [
       # Title
-      text("Terminal Resize Detection Test",
+      text("┌─ Terminal Resize Detection Test ─┐",
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:green)
         |> TermUI.Renderer.Style.bold()
@@ -86,7 +93,7 @@ defmodule ResizeTest do
       text(""),
 
       # Current dimensions
-      text("Current Dimensions:",
+      text("Current Dimensions: #{dim_status}",
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:cyan)
         |> TermUI.Renderer.Style.bold()
@@ -102,14 +109,14 @@ defmodule ResizeTest do
       text(""),
 
       # Resize counter
-      text("Resize Events: #{state.resize_count}",
+      text("Resize Events Received: #{state.resize_count}",
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:magenta)
       ),
       text(""),
 
       # Separator
-      text("─" |> String.duplicate(50),
+      text(String.duplicate("─", 50),
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:bright_black)
       ),
@@ -127,15 +134,11 @@ defmodule ResizeTest do
       text(""),
 
       # Visual border indicator
-      text("Visual Border:",
-        TermUI.Renderer.Style.new()
-        |> TermUI.Renderer.Style.fg(:cyan)
-      ),
       render_border(state.width),
       text(""),
 
       # Footer
-      text("Status: Waiting for resize events...",
+      text("└─ Press 'q' to quit ─┘",
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:bright_black)
       )
@@ -144,16 +147,21 @@ defmodule ResizeTest do
 
   # Render a border that adapts to terminal width
   defp render_border(width) when width > 0 do
-    border_width = max(0, width - 4)  # Account for box padding
+    border_width = max(1, width - 6)  # Account for margins
     top = "┌" <> String.duplicate("─", border_width) <> "┐"
+    middle = "│" <> String.duplicate(" ", border_width) <> "│"
     bottom = "└" <> String.duplicate("─", border_width) <> "┘"
 
-    box([
+    stack(:vertical, [
+      text("Visual Border (width = #{width}):",
+        TermUI.Renderer.Style.new()
+        |> TermUI.Renderer.Style.fg(:cyan)
+      ),
       text(top,
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:blue)
       ),
-      text("│" <> String.duplicate(" ", border_width) <> "│",
+      text(middle,
         TermUI.Renderer.Style.new()
         |> TermUI.Renderer.Style.fg(:blue)
       ),

@@ -364,6 +364,14 @@ defmodule TermUI.Runtime do
       schedule_input_poll()
     end
 
+    # Send initial resize event if dimensions are available
+    # This ensures components know the terminal size at startup
+    if dimensions do
+      {width, height} = dimensions
+      initial_resize = TermUI.Event.Resize.new(width, height)
+      send(self(), {:event, initial_resize})
+    end
+
     {:ok, state}
   end
 

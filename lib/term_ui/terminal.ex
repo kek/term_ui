@@ -195,6 +195,15 @@ defmodule TermUI.Terminal do
     check_previous_crash()
     create_ets_table()
 
+    # Register for SIGWINCH (terminal resize) signals
+    # This makes the OS send :sigwinch messages to this process when the terminal is resized
+    try do
+      :os.set_signal(:sigwinch, :handle)
+    rescue
+      # Ignore if :os.set_signal/2 is not available (e.g., on Windows)
+      _ -> :ok
+    end
+
     state = State.new()
     {:ok, state}
   end
