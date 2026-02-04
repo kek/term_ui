@@ -448,8 +448,9 @@ defmodule TermUI.Runtime do
   end
 
   defp setup_terminal_and_buffers do
-    # Enable raw mode first
-    with {:ok, _} <- Terminal.enable_raw_mode(),
+    # Ensure Terminal GenServer is started before enabling raw mode
+    with {:ok, _} <- ensure_terminal_started(),
+         {:ok, _} <- Terminal.enable_raw_mode(),
          :ok <- Terminal.enter_alternate_screen(),
          :ok <- Terminal.hide_cursor(),
          :ok <- Terminal.enable_mouse_tracking(:all),
@@ -476,6 +477,16 @@ defmodule TermUI.Runtime do
     case Terminal.get_terminal_size() do
       {:ok, {rows, cols}} -> {rows, cols}
       {:error, _reason} -> {24, 80}
+    end
+  end
+
+  defp ensure_terminal_started do
+    case Process.whereis(Terminal) do
+      nil ->
+        Terminal.start_link()
+
+      pid ->
+        {:ok, pid}
     end
   end
 
